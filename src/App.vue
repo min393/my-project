@@ -1,63 +1,88 @@
 <template>
-  <div id="app">
-    <h1>Чеклист запланированных дел</h1>
-    <TodoInput @add-todo="addTodo" />
-    <TodoList
-      :todos="todos"
-      @toggle-complete="toggleComplete"
-      @edit-todo="editTodo"
-      @delete-todo="deleteTodo"
+  <div class="app-container">
+    <NotesSidebar
+      :notes="notes"
+      :selected-id="selectedNoteId"
+      @select="selectNote"
+      @delete="deleteNote"
+      @new="newNote"
+    />
+
+    <NotesEditor
+      :value="currentNote"
+      @save="saveNote"
     />
   </div>
 </template>
 
 <script>
-import TodoInput from "./components/TodoInput.vue";
-import TodoList from "./components/TodoList.vue";
+import NotesSidebar from './components/NotesSidebar.vue'
+import NotesEditor from './components/NotesEditor.vue'
 
 export default {
-  name: "App",
-  components: { TodoInput, TodoList },
+  name: 'App',
+  components: {
+    NotesSidebar,
+    NotesEditor
+  },
   data() {
     return {
-      // 初始数据，和你示例里的一样
-      todos: [
-        { id: 1, text: "купить хлеб", completed: false },
-        { id: 2, text: "убрать дом", completed: false }
-      ]
-    };
+      notes: [],
+      selectedNoteId: null,
+      currentNote: { title: '', content: '' }
+    }
+  },
+  mounted() {
+    const data = localStorage.getItem('notes')
+    if (data) this.notes = JSON.parse(data)
   },
   methods: {
-    addTodo(text) {
-      this.todos.push({
-        id: Date.now(),
-        text,
-        completed: false
-      });
+    selectNote(note) {
+      this.selectedNoteId = note.id
+      this.currentNote = { ...note }
     },
-    toggleComplete(id) {
-      const todo = this.todos.find(t => t.id === id);
-      if (todo) todo.completed = !todo.completed;
+    newNote() {
+      this.selectedNoteId = null
+      this.currentNote = { title: '', content: '' }
     },
-    editTodo({ id, newText }) {
-      const todo = this.todos.find(t => t.id === id);
-      if (todo) todo.text = newText;
+    saveNote(note) {
+      if (!note.title.trim() && !note.content.trim()) {
+        alert('不能保存空白笔记')
+        return
+      }
+
+      if (this.selectedNoteId) {
+        const index = this.notes.findIndex(n => n.id === this.selectedNoteId)
+        if (index !== -1) {
+          this.notes[index] = { ...note, id: this.selectedNoteId }
+        }
+      } else {
+        const newNote = { id: Date.now(), ...note }
+        this.notes.push(newNote)
+        this.selectedNoteId = newNote.id
+      }
+
+      localStorage.setItem('notes', JSON.stringify(this.notes))
+      alert('保存成功！')
     },
-    deleteTodo(id) {
-      this.todos = this.todos.filter(t => t.id !== id);
+    deleteNote(id) {
+      if (confirm('确定删除？')) {
+        this.notes = this.notes.filter(n => n.id !== id)
+        localStorage.setItem('notes', JSON.stringify(this.notes))
+        if (this.selectedNoteId === id) this.newNote()
+      }
     }
   }
-};
+}
 </script>
 
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
-  max-width: 600px;
-  margin: 20px auto;
-  padding: 0 16px;
+<style scoped>
+.app-container {
+  display: flex;
+  max-width: 900px;
+  margin: 30px auto;
+  height: 550px;
+  border: 1px solid #ccc;
+  font-family: "Microsoft YaHei", sans-serif;
 }
 </style>
